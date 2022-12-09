@@ -1,0 +1,19 @@
+#
+# this is your module manifest and used by Titanium
+# during compilation, packaging, distribution, etc.
+#
+version: 1.0.0
+apiversion: 2
+architectures: arm64 x86_64
+mac: false
+description: com.juruperisian.revenuecat
+author: Your Name
+license: Specify your license
+copyright: Copyright (c) 2022 by Your Company
+
+# these should not be edited
+name: com.juruperisian.revenuecat
+moduleid: com.juruperisian.revenuecat
+guid: 81646e76-5a05-49e2-ba13-420b4324ed7f
+platform: iphone
+minsdk: 11.1.1.GA
