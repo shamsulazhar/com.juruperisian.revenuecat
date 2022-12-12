@@ -30,7 +30,10 @@ class ComJuruperisianRevenuecatModule: TiModule {
   public let testProperty: String = "Hello World"
     
     @objc(configure:)
-    func configure(arguments: Array<Any>?) -> Void {
+    func configure(arguments: [Any]?) -> Void {
+        NSLog("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+        print("in configure")
         guard let arguments = arguments, let params = arguments[0] as? [String: Any] else {return}
         let apiKey = params["apiKey"] as? String ?? ""
         let userId = params["userId"] as? String ?? ""
@@ -43,7 +46,64 @@ class ComJuruperisianRevenuecatModule: TiModule {
                   .build()
          )
     }
-  
+    
+    @objc(isSubscribed:)
+    func isSubscribed(arguments: [Any]) -> Void {
+        // Unwrap the first element of the array using the `guard` keyword
+        if case let callback as KrollCallback = arguments.first {
+            NSLog("1 \(callback)")
+           
+            // If the first element is a (Bool) -> Void function, call it with a true value
+            Purchases.shared.getCustomerInfo { (customerInfo, error) in
+                NSLog("customerInfo:  error: ")
+                // access latest customerInfo
+                guard let isEmpty = (customerInfo?.entitlements.active.isEmpty) else {return}
+                
+                if !isEmpty {
+                    //user has access to some entitlement
+                    NSLog("isSubscribed")
+                    callback.call([true], thisObject: nil)
+                } else {
+                    NSLog("not subscribed")
+                    callback.call([false], thisObject: nil)
+                }
+            }
+        }
+    }
+        
+    @objc(getCurrentOfferings:)
+    func getCurrentOfferings(arguments: [Any]) -> Void {
+        NSLog("in getCurrentOfferings")
+        if case let callback as KrollCallback = arguments.first {
+            NSLog("callback: \(String(describing: callback))")
+            Purchases.shared.getOfferings { (offerings, error) in
+                NSLog("offerings: \(String(describing: offerings)) - error: \(String(describing: error))")
+                if let packages = offerings?.current?.availablePackages {
+                    // Display packages for sale
+                    NSLog("packages: \(packages)")
+//                    let packages: [RCPackage] = // An array of RCPackage objects
+
+                    let dictionaryArray = packages.map { package -> [String: String] in
+                        let localizedPriceString = package.localizedPriceString
+                        let offeringIdentifier = package.offeringIdentifier
+                        let storeProduct = package.storeProduct
+                        
+                        return [
+                            "localizedPriceString": localizedPriceString,
+                            "offeringIdentifier": offeringIdentifier,
+                            "localizedDescription": storeProduct.localizedDescription,
+                            "localizedTitle": storeProduct.localizedTitle,
+                            "productIdentifier": storeProduct.productIdentifier
+                        ]
+                    }
+
+                    callback.call(dictionaryArray, thisObject: nil)
+                }
+            }
+        }
+    }
+    
+    
   func moduleGUID() -> String {
     return "81646e76-5a05-49e2-ba13-420b4324ed7f"
   }
