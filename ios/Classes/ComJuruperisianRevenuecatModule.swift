@@ -23,22 +23,11 @@ import RevenueCat
  and NSString vs. String.
  
  */
-func getPropertiesAndValues(object: Any) -> [String: Any] {
-  let mirror = Mirror(reflecting: object)
-  var result: [String: Any] = [:]
-  for child in mirror.children {
-    if let label = child.label {
-      result[label] = child.value
-    }
-  }
-  return result
-}
-
 
 @objc(ComJuruperisianRevenuecatModule)
 class ComJuruperisianRevenuecatModule: TiModule {
 
-  public let testProperty: String = "Hello World"
+    public let testProperty: String = "Hello World"
     
     @objc(configure:)
     func configure(arguments: [Any]?) -> Void {
@@ -60,8 +49,6 @@ class ComJuruperisianRevenuecatModule: TiModule {
     func isSubscribed(arguments: [Any]) -> Void {
         // Unwrap the first element of the array using the `guard` keyword
         if case let callback as KrollCallback = arguments.first {
-            NSLog("1 \(callback)")
-           
             // If the first element is a (Bool) -> Void function, call it with a true value
             Purchases.shared.getCustomerInfo { (customerInfo, error) in
                 NSLog("customerInfo:  error: ")
@@ -90,13 +77,11 @@ class ComJuruperisianRevenuecatModule: TiModule {
                 if let packages = offerings?.current?.availablePackages {
                     // Display packages for sale
                     NSLog("packages: \(packages)")
-//                    let packages: [RCPackage] = // An array of RCPackage objects
 
                     let dictionaryArray = packages.map { package -> [String: Any] in
                         let localizedPriceString = package.localizedPriceString
                         let offeringIdentifier = package.offeringIdentifier
                         let storeProduct = package.storeProduct
-                        let packageDict = getPropertiesAndValues(object: package)
                         
                         return [
                             "id": package.id,
@@ -109,7 +94,6 @@ class ComJuruperisianRevenuecatModule: TiModule {
                         ]
                     }
                     
-
                     callback.call([dictionaryArray], thisObject: nil)
                 }
             }
@@ -216,30 +200,30 @@ class ComJuruperisianRevenuecatModule: TiModule {
         }
     }
     
-  func moduleGUID() -> String {
-    return "81646e76-5a05-49e2-ba13-420b4324ed7f"
-  }
+    func moduleGUID() -> String {
+        return "81646e76-5a05-49e2-ba13-420b4324ed7f"
+    }
   
-  override func moduleId() -> String! {
-    return "com.juruperisian.revenuecat"
-  }
+    override func moduleId() -> String! {
+        return "com.juruperisian.revenuecat"
+    }
 
-  override func startup() {
-    super.startup()
-    debugPrint("[DEBUG] \(self) loaded")
-  }
+    override func startup() {
+        super.startup()
+        debugPrint("[DEBUG] \(self) loaded")
+    }
 
-  @objc(example:)
-  func example(arguments: Array<Any>?) -> String? {
-    guard let arguments = arguments, let params = arguments[0] as? [String: Any] else { return nil }
+    @objc(example:)
+    func example(arguments: Array<Any>?) -> String? {
+        guard let arguments = arguments, let params = arguments[0] as? [String: Any] else { return nil }
 
-    // Example method. 
-    // Call with "MyModule.example({ hello: 'world' })"
+        // Example method.
+        // Call with "MyModule.example({ hello: 'world' })"
 
-    return params["hello"] as? String
-  }
+        return params["hello"] as? String
+    }
   
-  @objc public var exampleProp: String {
+    @objc public var exampleProp: String {
      get { 
         // Example property getter
         return "Titanium rocks!"
