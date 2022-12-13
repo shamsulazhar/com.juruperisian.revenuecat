@@ -23,6 +23,17 @@ import RevenueCat
  and NSString vs. String.
  
  */
+func getPropertiesAndValues(object: Any) -> [String: Any] {
+  let mirror = Mirror(reflecting: object)
+  var result: [String: Any] = [:]
+  for child in mirror.children {
+    if let label = child.label {
+      result[label] = child.value
+    }
+  }
+  return result
+}
+
 
 @objc(ComJuruperisianRevenuecatModule)
 class ComJuruperisianRevenuecatModule: TiModule {
@@ -31,9 +42,6 @@ class ComJuruperisianRevenuecatModule: TiModule {
     
     @objc(configure:)
     func configure(arguments: [Any]?) -> Void {
-        NSLog("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        print("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-        print("in configure")
         guard let arguments = arguments, let params = arguments[0] as? [String: Any] else {return}
         let apiKey = params["apiKey"] as? String ?? ""
         let userId = params["userId"] as? String ?? ""
@@ -43,6 +51,7 @@ class ComJuruperisianRevenuecatModule: TiModule {
         Purchases.configure(
          with: Configuration.Builder(withAPIKey: apiKey)
                   .with(appUserID: userId)
+                  .with(usesStoreKit2IfAvailable: true)
                   .build()
          )
     }
@@ -83,12 +92,15 @@ class ComJuruperisianRevenuecatModule: TiModule {
                     NSLog("packages: \(packages)")
 //                    let packages: [RCPackage] = // An array of RCPackage objects
 
-                    let dictionaryArray = packages.map { package -> [String: String] in
+                    let dictionaryArray = packages.map { package -> [String: Any] in
                         let localizedPriceString = package.localizedPriceString
                         let offeringIdentifier = package.offeringIdentifier
                         let storeProduct = package.storeProduct
+                        let packageDict = getPropertiesAndValues(object: package)
                         
                         return [
+                            "id": package.id,
+                            "identifier": package.identifier,
                             "localizedPriceString": localizedPriceString,
                             "offeringIdentifier": offeringIdentifier,
                             "localizedDescription": storeProduct.localizedDescription,
@@ -96,13 +108,113 @@ class ComJuruperisianRevenuecatModule: TiModule {
                             "productIdentifier": storeProduct.productIdentifier
                         ]
                     }
+                    
 
-                    callback.call(dictionaryArray, thisObject: nil)
+                    callback.call([dictionaryArray], thisObject: nil)
                 }
             }
         }
     }
     
+    @objc(purchase:)
+    func purchase(arguments: [Any]?) -> Void {
+        guard let args = arguments,
+              let productId = args[0] as? String
+        else {
+            NSLog("purchase: - Invalid parameters provided!")
+            return
+        }
+        
+        let callback = args[1] as? KrollCallback
+        
+        // Find package by id
+        Purchases.shared.getOfferings { offerings, error in
+            var success = false
+            var errorMsg = ""
+            
+            if let error = error {
+                // Handle the error
+                errorMsg = error.localizedDescription
+                NSLog(errorMsg)
+                
+                // Call JS callback if any - getOfferings:
+                callback?.call([[
+                    "success": success,
+                    "error": errorMsg
+                ]], thisObject: nil)
+            } else if let offerings = offerings, let packages = offerings.current?.availablePackages {
+                // Display packages for sale
+                NSLog("packages: \(packages)")
+
+                if let package = packages.first(where: { $0.storeProduct.productIdentifier == productId }) {
+                    // Use package here
+                    Purchases.shared.purchase(package: package) { (transaction, customerInfo, error, userCancelled) in
+                        var success = false
+                        var errorMsg = ""
+                        
+                        if userCancelled {
+                            errorMsg = error?.localizedDescription ?? ""
+                            NSLog("User Cancelled")
+                        } else if let error = error {
+                            errorMsg = error.localizedDescription
+                            NSLog(errorMsg)
+                        } else if let customerInfo = customerInfo {
+                            success = true
+                            
+                            NSLog("customerInfo: \(customerInfo)")
+                            NSLog("transaction: \(String(describing: transaction))")
+                        }
+                        
+                        // Call JS callback if any - purchase:
+                        callback?.call([[
+                            "success": success,
+                            "error": errorMsg
+                        ]], thisObject: nil)
+                    }
+                } else {
+                    errorMsg = "Cannot find product with id: \(productId)"
+                    // Handle the case where package is nil
+                    NSLog(errorMsg)
+                    
+                    // Call JS callback if any - no product id:
+                    callback?.call([[
+                        "success": success,
+                        "error": errorMsg
+                    ]], thisObject: nil)
+                }
+            } else {
+                // Call JS callback if any - purchase:
+                callback?.call([[
+                    "success": false,
+                    "error": "Cannot find any available packages in the current offering"
+                ]], thisObject: nil)
+            }
+        }
+    }
+    
+    @objc(restorePurchases:)
+    func restorePurchases(args: [Any]?) -> Void {
+        Purchases.shared.restorePurchases { customerInfo, error in
+            //... check customerInfo to see if entitlement is now active
+            var success = false
+            var errorMsg = ""
+            
+            if let error = error {
+                errorMsg = error.localizedDescription
+                NSLog(errorMsg)
+            } else if let customerInfo = customerInfo {
+                success = true
+                NSLog("restorePurchases - customerInfo: \(customerInfo)")
+            }
+            
+            if let args = args, let callback = args[0] as? KrollCallback {
+                callback.call([[
+                    "success": success,
+                    "error": errorMsg
+                ]], thisObject: nil)
+            }
+        }
+    }
     
   func moduleGUID() -> String {
     return "81646e76-5a05-49e2-ba13-420b4324ed7f"
