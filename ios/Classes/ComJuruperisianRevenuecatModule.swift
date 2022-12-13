@@ -6,7 +6,6 @@
 //  Copyright (c) 2022 Your Company. All rights reserved.
 //
 
-import UIKit
 import TitaniumKit
 import RevenueCat
 
@@ -24,25 +23,94 @@ import RevenueCat
  
  */
 
-@objc(ComJuruperisianRevenuecatModule)
-class ComJuruperisianRevenuecatModule: TiModule {
+func dateToStr(_ date: Date?) -> String? {
+    guard let date = date else {return nil}
+    
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"  // Set the desired date format
 
+    return dateFormatter.string(from: date)
+}
+
+func customerInfoToDict(_ customerInfo: CustomerInfo) -> [String:Any?] {
+    var dict = [String:Any?]()
+    
+    dict["description"] = customerInfo.description
+    dict["originalAppUserId"] = customerInfo.originalAppUserId
+    dict["originalApplicationVersion"] = customerInfo.originalApplicationVersion
+    dict["firstSeen"] = dateToStr(customerInfo.firstSeen)
+    dict["latestExpirationDate"] = dateToStr(customerInfo.latestExpirationDate)
+    dict["originalApplicationVersion"] = customerInfo.originalApplicationVersion
+    dict["originalPurchaseDate"] = dateToStr(customerInfo.originalPurchaseDate)
+    dict["originalApplicationVersion"] = customerInfo.originalApplicationVersion
+    dict["activeSubscriptions"] = Array(customerInfo.activeSubscriptions)
+    dict["allPurchasedProductIdentifiers"] = Array(customerInfo.allPurchasedProductIdentifiers)
+    
+    return dict
+}
+
+@objc(ComJuruperisianRevenuecatModule)
+class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
+    private var purchasesDelegate: KrollCallback?
     public let testProperty: String = "Hello World"
     
+    /// -  Whenever the `shared` instance of Purchases updates the PurchaserInfo cache, this method will be called.
+    func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
+        NSLog("delegate - purchases: \(purchases)")
+        
+        
+        let customerInfoDict = customerInfoToDict(customerInfo)
+        NSLog("delegate - custInfo: \(customerInfoDict)")
+        
+        purchasesDelegate?.call([customerInfoDict], thisObject: nil)
+    }
+    
+//    @objc(setPurchasesDelegate:)
+//    func setPurchasesDelegate(arguments: [Any]?) -> Void {
+//        NSLog("0")
+//        guard let args = arguments,
+//              let callback = args[0] as? KrollCallback
+//        else {
+//            NSLog("setPurchasesDelegate: - Invalid parameters provided!")
+//            return
+//        }
+//
+//        NSLog("1")
+//        self.purchasesDelegate = callback
+//        NSLog("2")
+//    }
+   
     @objc(configure:)
     func configure(arguments: [Any]?) -> Void {
         guard let arguments = arguments, let params = arguments[0] as? [String: Any] else {return}
         let apiKey = params["apiKey"] as? String ?? ""
-        let userId = params["userId"] as? String ?? ""
         
         Purchases.logLevel = .debug
         
         Purchases.configure(
-         with: Configuration.Builder(withAPIKey: apiKey)
-                  .with(appUserID: userId)
+            with: Configuration.Builder(withAPIKey: apiKey)
                   .with(usesStoreKit2IfAvailable: true)
                   .build()
-         )
+        )
+    }
+    
+    @objc(login:)
+    func login(args: [Any]?) -> Void {
+        guard
+            let args = args, let appUserId = args[0] as? String
+        else {
+            fatalError("login: - UserId is required")
+        }
+        
+        Purchases.shared.logIn(appUserId) { customerInfo, isNewUser, error in
+            if args.count > 1, let callback = args[1] as? KrollCallback {
+                callback.call([[
+                    "success": error == nil,
+                    "isNewUser": isNewUser,
+                    "error": error?.localizedDescription ?? ""
+                ]], thisObject: nil)
+            }
+        }
     }
     
     @objc(isSubscribed:)
@@ -73,7 +141,6 @@ class ComJuruperisianRevenuecatModule: TiModule {
         if case let callback as KrollCallback = arguments.first {
             NSLog("callback: \(String(describing: callback))")
             Purchases.shared.getOfferings { (offerings, error) in
-                NSLog("offerings: \(String(describing: offerings)) - error: \(String(describing: error))")
                 if let packages = offerings?.current?.availablePackages {
                     // Display packages for sale
                     NSLog("packages: \(packages)")
