@@ -23,6 +23,10 @@ import RevenueCat
  
  */
 
+let MODULE_NAME = "com.juruperisian.revenuecat"
+
+//-------------------------------------------------------------------------
+
 func dateToStr(_ date: Date?) -> String? {
     guard let date = date else {return nil}
     
@@ -31,6 +35,8 @@ func dateToStr(_ date: Date?) -> String? {
 
     return dateFormatter.string(from: date)
 }
+
+//-------------------------------------------------------------------------
 
 func customerInfoToDict(_ customerInfo: CustomerInfo) -> [String:Any?] {
     var dict = [String:Any?]()
@@ -80,12 +86,14 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
 //        NSLog("2")
 //    }
    
+    //-------------------------------------------------------------------------
+    
     @objc(configure:)
     func configure(arguments: [Any]?) -> Void {
         guard let arguments = arguments, let params = arguments[0] as? [String: Any] else {return}
         let apiKey = params["apiKey"] as? String ?? ""
         
-        Purchases.logLevel = .debug
+        Purchases.logLevel = .verbose
         
         Purchases.configure(
             with: Configuration.Builder(withAPIKey: apiKey)
@@ -94,12 +102,15 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
         )
     }
     
+    //-------------------------------------------------------------------------
+    
     @objc(login:)
-    func login(args: [Any]?) -> Void {
+    func login(_ args: [Any]?) -> Void {
         guard
             let args = args, let appUserId = args[0] as? String
         else {
-            fatalError("login: - UserId is required")
+            throwException("Invalid number of arguments, expected at least one", subreason: "Function 'login' (\(MODULE_NAME))", location: CODELOCATION)
+            return
         }
         
         Purchases.shared.logIn(appUserId) { customerInfo, isNewUser, error in
@@ -112,6 +123,8 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
             }
         }
     }
+    
+    //-------------------------------------------------------------------------
     
     @objc(isSubscribed:)
     func isSubscribed(arguments: [Any]) -> Void {
@@ -135,6 +148,8 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
         }
     }
         
+    //-------------------------------------------------------------------------
+    
     @objc(getCurrentOfferings:)
     func getCurrentOfferings(arguments: [Any]) -> Void {
         NSLog("in getCurrentOfferings")
@@ -166,6 +181,8 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
             }
         }
     }
+    
+    //-------------------------------------------------------------------------
     
     @objc(purchase:)
     func purchase(arguments: [Any]?) -> Void {
@@ -243,6 +260,8 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
         }
     }
     
+    //-------------------------------------------------------------------------
+    
     @objc(restorePurchases:)
     func restorePurchases(args: [Any]?) -> Void {
         Purchases.shared.restorePurchases { customerInfo, error in
@@ -266,6 +285,8 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
             }
         }
     }
+    
+    //-------------------------------------------------------------------------
     
     func moduleGUID() -> String {
         return "81646e76-5a05-49e2-ba13-420b4324ed7f"
