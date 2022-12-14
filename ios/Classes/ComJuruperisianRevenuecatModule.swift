@@ -2,8 +2,8 @@
 //  ComJuruperisianRevenuecatModule.swift
 //  com.juruperisian.revenuecat
 //
-//  Created by Your Name
-//  Copyright (c) 2022 Your Company. All rights reserved.
+//  Created by Shamsul Azhar (https://www.upwork.com/freelancers/~01aaf7d9d21867211d)
+//  Copyright (c) 2022 Shamsul Azhar. All rights reserved.
 //
 
 import TitaniumKit
@@ -62,30 +62,16 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
     
     /// -  Whenever the `shared` instance of Purchases updates the PurchaserInfo cache, this method will be called.
     func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
+        NSLog("=============================================================================================")
         NSLog("delegate - purchases: \(purchases)")
         
         
         let customerInfoDict = customerInfoToDict(customerInfo)
         NSLog("delegate - custInfo: \(customerInfoDict)")
-        
+        NSLog("=============================================================================================")
         purchasesDelegate?.call([customerInfoDict], thisObject: nil)
     }
-    
-//    @objc(setPurchasesDelegate:)
-//    func setPurchasesDelegate(arguments: [Any]?) -> Void {
-//        NSLog("0")
-//        guard let args = arguments,
-//              let callback = args[0] as? KrollCallback
-//        else {
-//            NSLog("setPurchasesDelegate: - Invalid parameters provided!")
-//            return
-//        }
-//
-//        NSLog("1")
-//        self.purchasesDelegate = callback
-//        NSLog("2")
-//    }
-   
+      
     //-------------------------------------------------------------------------
     
     @objc(configure:)
