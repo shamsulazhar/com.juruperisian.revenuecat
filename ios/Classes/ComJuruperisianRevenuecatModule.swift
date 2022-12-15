@@ -112,25 +112,71 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
     
     //-------------------------------------------------------------------------
     
-    @objc(isSubscribed:)
-    func isSubscribed(arguments: [Any]) -> Void {
-        // Unwrap the first element of the array using the `guard` keyword
-        if case let callback as KrollCallback = arguments.first {
-            // If the first element is a (Bool) -> Void function, call it with a true value
-            Purchases.shared.getCustomerInfo { (customerInfo, error) in
-                NSLog("customerInfo:  error: ")
+    @objc(hasAnyActiveEntitlements:)
+    func hasAnyActiveEntitlements(args: [Any]?) -> Void {
+        guard
+            let args = args, let callback = args[0] as? KrollCallback
+        else {
+            throwException("Invalid argument, expected a callback", subreason: "Function 'hasAnyActiveEntitlements' (\(MODULE_NAME))", location: CODELOCATION)
+            return
+        }
+        
+        Purchases.shared.getCustomerInfo { (customerInfo, error) in
+            var result = [
+                "isActive": false,
+                "error": error?.localizedDescription ?? "",
+                "success": false
+            ]
+            
+            if error == nil {
                 // access latest customerInfo
-                guard let isEmpty = (customerInfo?.entitlements.active.isEmpty) else {return}
-                
-                if !isEmpty {
-                    //user has access to some entitlement
-                    NSLog("isSubscribed")
-                    callback.call([true], thisObject: nil)
+                if let isEmpty = (customerInfo?.entitlements.active.isEmpty) {
+                    result["success"] = true
+                    result["isActive"] = !isEmpty
                 } else {
-                    NSLog("not subscribed")
-                    callback.call([false], thisObject: nil)
+                    // do something if isEmpty is nil
+                    result["error"] = "Problem retrieving customer entitlements"
                 }
             }
+            
+            callback.call([result], thisObject:nil)
+        }
+    }
+    
+    //-------------------------------------------------------------------------
+    
+    @objc(isEntitlementActive:)
+    func isEntitlementActive(_ args: [Any]? ) -> Void {
+        // Extract the entitlement ID from the arguments
+        guard let args = args,  let entitlementId = args[0] as? String else {
+            throwException("Invalid first argument, expected a string", subreason: "Function 'isEntitlementActive' (\(MODULE_NAME))", location: CODELOCATION)
+            return
+        }
+
+        // Extract the KrollCallback from the arguments
+        guard let callback = args[1] as? KrollCallback else {
+            throwException("Invalid second argument, expected a callback", subreason: "Function 'isEntitlementActive' (\(MODULE_NAME))", location: CODELOCATION)
+            return
+        }
+
+        // Use the RevenueCat getCustomerInfo method with a completion callback
+        // to retrieve the customer's information
+        Purchases.shared.getCustomerInfo { (customerInfo, error) in
+            var result: [String: Any] = [:]
+
+            if let customerInfo = customerInfo {
+                let isActive = customerInfo.entitlements[entitlementId]?.isActive
+                result["isActive"] = isActive
+                result["error"] = ""
+                result["success"] = true
+            } else {
+                result["isActive"] = false
+                result["error"] = error?.localizedDescription ?? ""
+                result["success"] = false
+            }
+
+            // Return the result to the caller by calling the KrollCallback
+            callback.call([result], thisObject: nil)
         }
     }
         
