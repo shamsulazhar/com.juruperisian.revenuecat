@@ -112,6 +112,33 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
     
     //-------------------------------------------------------------------------
     
+    @objc(logout:)
+    func logout(_ args: [Any]? ) -> Void {
+        var callback: KrollCallback?
+        
+        if let args = args {
+            callback = args[0] as? KrollCallback
+        }
+
+        // Use the RevenueCat logOut method with a completion callback
+        Purchases.shared.logOut { (customerInfo, error) in
+            var result: [String: Any] = [:]
+
+            if error == nil {
+                result["error"] = ""
+                result["success"] = true
+            } else {
+                result["error"] = error?.localizedDescription ?? ""
+                result["success"] = false
+            }
+
+            // Return the result to the caller by calling the KrollCallback
+            callback?.call([result], thisObject: nil)
+        }
+    }
+    
+    //-------------------------------------------------------------------------
+    
     @objc(hasAnyActiveEntitlements:)
     func hasAnyActiveEntitlements(args: [Any]?) -> Void {
         guard
@@ -229,7 +256,6 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
         
         // Find package by id
         Purchases.shared.getOfferings { offerings, error in
-            var success = false
             var errorMsg = ""
             
             if let error = error {
@@ -239,7 +265,7 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
                 
                 // Call JS callback if any - getOfferings:
                 callback?.call([[
-                    "success": success,
+                    "success": false,
                     "error": errorMsg
                 ]], thisObject: nil)
             } else if let offerings = offerings, let packages = offerings.current?.availablePackages {
@@ -278,7 +304,7 @@ class ComJuruperisianRevenuecatModule: TiModule, PurchasesDelegate {
                     
                     // Call JS callback if any - no product id:
                     callback?.call([[
-                        "success": success,
+                        "success": false,
                         "error": errorMsg
                     ]], thisObject: nil)
                 }
